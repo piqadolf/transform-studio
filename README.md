@@ -37,11 +37,21 @@ B — структурирующий элемент (круг с настраи�
 
 ## Установка
 
-Нужен Python 3.10+ с tkinter (в стандартной сборке есть).
+Нужен Python 3.10+ с tkinter (в стандартной сборке Windows/macOS есть; на Linux —
+`sudo apt install python3-tk`).
+
+**Linux / macOS:**
 
 ```bash
+python3 -m venv .venv
+.venv/bin/pip install matplotlib shapely numpy
+```
+
+**Windows (PowerShell или cmd):**
+
+```powershell
 python -m venv .venv
-.venv/bin/pip install matplotlib shapely numpy    # Windows: .venv\Scripts\pip install ...
+.venv\Scripts\pip install matplotlib shapely numpy
 ```
 
 ## Запуск
