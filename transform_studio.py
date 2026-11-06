@@ -47,7 +47,10 @@ import warnings
 import numpy as np
 
 import matplotlib
-if "--smoke" in sys.argv or not os.environ.get("DISPLAY"):
+_headless = sys.platform.startswith("linux") and not (
+    os.environ.get("DISPLAY") or os.environ.get("WAYLAND_DISPLAY")
+)
+if "--smoke" in sys.argv or _headless:
     matplotlib.use("Agg")
 else:
     try:
@@ -1362,8 +1365,9 @@ def main():
     if not selfcheck(verbose=False):
         print("предупреждение: selfcheck не прошёл (см. --selfcheck)")
     if matplotlib.get_backend().lower() == "agg":
-        print("нет графического дисплея (DISPLAY не задан): показываю окно нельзя.")
-        print("запусти из X-сессии, либо используй --smoke / --selfcheck.")
+        print("нет графического дисплея / Tk-бэкенда: показать окно нельзя.")
+        print("на Linux запусти из X/Wayland-сессии; проверь, что tkinter установлен;")
+        print("либо используй --smoke / --selfcheck.")
         plt.close(app.fig)
         return
     app.run()
