@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" width="200" height="200">
+  <!-- Regular heptagon: center (100,100), circumradius 90, vertex at top -->
+  <polygon fill="#ddd" stroke="#222" stroke-width="2" stroke-linejoin="round"
+    points="100,10 170.365,43.886 187.744,120.027 139.050,181.087 60.950,181.087 12.256,120.027 29.635,43.886"/>
+</svg>
