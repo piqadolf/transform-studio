@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" width="200" height="200">
+  <!-- Regular hexagon: center (100,100), circumradius 90, pointy-top -->
+  <polygon fill="#ddd" stroke="#222" stroke-width="2" stroke-linejoin="round"
+    points="100,10 177.942,55 177.942,145 100,190 22.058,145 22.058,55"/>
+</svg>
