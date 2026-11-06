@@ -1,0 +1,12 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+.venv_stale/
+
+# Manim generated output
+media/
+
+# OS
+.DS_Store
+Thumbs.db
