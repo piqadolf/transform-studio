@@ -59,7 +59,7 @@ else:
         matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 from matplotlib.path import Path
-from matplotlib.patches import PathPatch, Circle, Rectangle, FancyArrow
+from matplotlib.patches import Patch, PathPatch, Circle, Rectangle, FancyArrow
 from matplotlib.widgets import RadioButtons, Slider, Button, CheckButtons
 
 import shapely
@@ -964,16 +964,14 @@ class TransformStudio:
 
     # ------------------------------------------------------------ отрисовка
 
-    def redraw(self):
-        for a in self.dyn:
-            try:
-                a.remove()
-            except Exception:
-                pass
+    def _clear(self):
         self.dyn = []
         for artist in list(self.ax.lines) + list(self.ax.patches) + list(self.ax.texts):
             artist.remove()
         self._build_frame_decor()
+
+    def redraw(self):
+        self._clear()
 
         # левая панель: контур
         for ring in self.rings:
@@ -984,9 +982,25 @@ class TransformStudio:
                 self.ax.plot(ring[:, 0], ring[:, 1], "o", ms=4.5, color="#c0392b",
                              mfc="white", mew=1.4, zorder=4)
 
+        self._draw_mechanism()
         self._draw_result(alpha=0.22)
         self._set_status(self._result_note())
         self.fig.canvas.draw_idle()
+
+    def _draw_mechanism(self):
+        """Итоговый кадр слева: копии B по пути центров и контур результата поверх A."""
+        pts = getattr(self, "sweep_pts", [])
+        if len(pts) < 3:
+            return
+        for g in range(0, len(pts), max(1, len(pts) // 18)):
+            self.ax.add_patch(self._element_patch(pts[g], alpha=0.16))
+        self.ax.add_patch(self._element_patch(pts[0], alpha=0.8, lw=1.8))
+        self.ax.plot(*pts[0], "o", ms=3, color="#3f9d5a", zorder=5)
+        for poly in iter_polygons(self.result):
+            for ring in [poly.exterior, *poly.interiors]:
+                xy = np.asarray(ring.coords)
+                self.ax.plot(xy[:, 0], xy[:, 1], "--", color=OP_COLORS[self.op],
+                             lw=1.6, zorder=4)
 
     def _result_note(self):
         if self.result.is_empty:
@@ -1016,6 +1030,7 @@ class TransformStudio:
     def _build_timeline(self):
         """Список (тип, данные). Всё детерминировано от t."""
         segs = []
+        self.sweep_pts = []
         if self.op == "diff":
             pts = sample_contour(self.geom, self.n_samples)
             n = len(pts)
@@ -1029,15 +1044,19 @@ class TransformStudio:
                 segs.append(("fill", None))
                 segs.append(("hold", None))
         else:
+            # центры копий B: для ⊕ — по контуру A (B снаружи касается A),
+            # для ⊖ и открытия — по контуру A⊖B (B внутри касается A),
+            # для закрытия — по контуру A⊕B (B снаружи касается A).
             sweep_src = {
                 "dilate": self.geom,
-                "close": self.geom,
+                "close": compute_op("dilate", self.geom, self.element, self.size),
                 "erode": compute_op("erode", self.geom, self.element, self.size),
-                "open": compute_op("open", self.geom, self.element, self.size),
+                "open": compute_op("erode", self.geom, self.element, self.size),
                 "hull": None,
             }[self.op]
             pts = (sample_contour(sweep_src, max(24, self.n_samples))
                    if sweep_src is not None else [])
+            self.sweep_pts = pts
             if len(pts) >= 3:
                 segs.append(("sweep", pts))
             segs.append(("fill", None))
@@ -1120,12 +1139,7 @@ class TransformStudio:
             self.draw_frame(self.t)
 
     def draw_frame(self, t):
-        for a in self.dyn:
-            try:
-                a.remove()
-            except Exception:
-                pass
-        self.dyn = []
+        self._clear()
         kind, data, u, seg_start = self._seg_at(t)
 
         # статичная база: контур слева
@@ -1151,6 +1165,8 @@ class TransformStudio:
         self.fig.canvas.draw_idle()
 
     def _dyn_add(self, artist):
+        if isinstance(artist, Patch) and artist.axes is None:
+            self.ax.add_patch(artist)
         self.dyn.append(artist)
         return artist
 
@@ -1173,7 +1189,7 @@ class TransformStudio:
                                                color="#3b76c4", alpha=0.5, zorder=4)[0])
             acc += self.PAIR_DUR
 
-        pa, pb = LEFT + a, LEFT + b
+        pa, pb = a, b  # контур уже в координатах левой панели
         if fade > 0:
             self._dyn_add(self.ax.plot(*pa, "o", ms=8, color="#c0392b", zorder=6,
                                        alpha=fade)[0])
@@ -1245,7 +1261,7 @@ class TransformStudio:
         self._dyn_add(self._element_patch(pos, alpha=0.35, lw=1.8))
 
     def _element_patch(self, center, alpha, lw=1.2):
-        c = LEFT + np.asarray(center)
+        c = np.asarray(center)  # контур уже в координатах левой панели
         if self.element == "disk":
             return Circle(c, self.size, fill=False, edgecolor="#3f9d5a",
                           alpha=alpha, lw=lw, zorder=5)
